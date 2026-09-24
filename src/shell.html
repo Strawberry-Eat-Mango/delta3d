@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>三角洲行动 3D</title>
+<meta name="description" content="浏览器里的 3D 搜打撤：零号大坝烽火地带。带装备进场，搜物资、打 AI 与敌方干员，限时撤离，哈夫币本地存档。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root{--g:#3aff8a;--g2:#1fc86a;--bg:#0c100e;--panel:rgba(14,20,17,.86);--line:rgba(58,255,138,.18);--txt:#e8efe9;--muted:#90a097;
+  --ui:"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;--num:"Rajdhani","Arial Narrow",sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#0c100e;color:var(--txt);font-family:var(--ui);user-select:none;-webkit-user-select:none}
+canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
+.hidden{display:none!important}
+button,select{font-family:inherit}
+/* HUD */
+#hud{position:fixed;inset:0;pointer-events:none}
+#vig{position:absolute;inset:0;opacity:0;background:radial-gradient(ellipse at center,transparent 45%,rgba(160,0,0,.55))}
+#flash{position:absolute;inset:0;opacity:0;background:rgba(200,20,20,.22);transition:opacity .3s}
+#scope.iron::after{content:"";position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px;border-radius:50%;background:var(--g);box-shadow:0 0 4px var(--g)}
+#compass{position:absolute;left:50%;top:10px;transform:translateX(-50%);width:520px;height:40px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.8))}
+#timer{position:absolute;left:18px;top:14px;background:var(--panel);border-left:3px solid var(--g);padding:5px 14px;display:flex;flex-direction:column}
+#timer span{font-size:11px;color:var(--muted);letter-spacing:2px}#timer b{font-family:var(--num);font-size:30px;line-height:1}#timer b.warn{color:#ff6a4a}
+#carry{position:absolute;left:18px;top:74px;font-size:12px;color:var(--muted);background:rgba(0,0,0,.35);padding:3px 10px}#carry b{color:#ffd24a;font-family:var(--num);font-size:16px}
+#feed{position:absolute;right:18px;top:16px;display:flex;flex-direction:column;gap:3px;align-items:flex-end}
+.fe{font-size:13px;padding:3px 10px;background:rgba(0,0,0,.45);color:#ccc}.fe b{color:#fff}.fe b.guard{color:#e8c07a}.fe b.boss{color:#ff6a4a}.fe i{font-style:normal;color:#aaa;margin:0 6px}.fe.me{background:rgba(58,255,138,.18)}
+#notice{position:absolute;left:50%;top:18%;transform:translateX(-50%);font-size:18px;font-weight:700;letter-spacing:2px;text-shadow:0 2px 6px rgba(0,0,0,.9);opacity:0;transition:opacity .3s;white-space:nowrap}#notice.warn{color:#ffcf6a}
+#killmsg{position:absolute;left:50%;top:64%;transform:translateX(-50%);text-align:center;opacity:0;transition:opacity .4s;text-shadow:0 2px 4px rgba(0,0,0,.9);font-size:16px}
+#killmsg b.v{color:#ff5a4a}#killmsg .hs{color:#ff6a4a;font-weight:800;margin:0 4px}#killmsg .k{font-family:var(--num);font-size:34px;color:var(--g);font-weight:700}
+#xh{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;transition:width .08s,height .08s}
+#xh i{position:absolute;background:var(--g);box-shadow:0 0 2px #000}
+#xh i:nth-child(1){left:50%;top:0;width:2px;height:8px;margin-left:-1px;transform:translateY(-4px)}#xh i:nth-child(2){left:50%;bottom:0;width:2px;height:8px;margin-left:-1px;transform:translateY(4px)}
+#xh i:nth-child(3){top:50%;left:0;height:2px;width:8px;margin-top:-1px;transform:translateX(-4px)}#xh i:nth-child(4){top:50%;right:0;height:2px;width:8px;margin-top:-1px;transform:translateX(4px)}
+#hitm{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px;opacity:0}
+#hitm::before,#hitm::after{content:"";position:absolute;left:12px;top:-2px;width:2px;height:30px;background:linear-gradient(180deg,#fff 30%,transparent 30%,transparent 70%,#fff 70%)}
+#hitm::before{transform:rotate(45deg)}#hitm::after{transform:rotate(-45deg)}
+#hitm.head::before,#hitm.head::after,#hitm.kill::before,#hitm.kill::after{background:linear-gradient(180deg,#ff3b2b 30%,transparent 30%,transparent 70%,#ff3b2b 70%)}
+#dmgdir{position:absolute;left:50%;top:50%}.dd{position:absolute;left:-110px;top:-110px;width:220px;height:220px;border-radius:50%;border:4px solid transparent;border-top-color:rgba(230,40,30,.9);transition:opacity 1.2s}
+#marks i{position:absolute;width:22px;height:22px;margin:-11px;border:2px solid #ff4a4a;transform:rotate(45deg);box-shadow:0 0 8px #ff4a4a}
+#pickup{position:absolute;left:calc(50% + 60px);top:calc(50% + 20px)}#pickup div{font-size:14px;background:rgba(0,0,0,.6);padding:5px 12px}#pickup b{background:var(--g);color:#0c100e;padding:0 7px;margin-right:6px}
+#healc{position:absolute;left:50%;top:50%;width:70px;height:70px;transform:translate(-50%,-50%);text-align:center}
+#healc svg{position:absolute;inset:0}#healc span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--num);font-size:22px}#healc em{position:absolute;top:74px;left:50%;transform:translateX(-50%);font-style:normal;font-size:12px;white-space:nowrap}
+#extract{position:absolute;left:50%;top:30%;transform:translateX(-50%);text-align:center;background:rgba(0,0,0,.55);border:1px solid var(--g);padding:10px 26px}
+#extract b{display:block;color:var(--g);font-size:22px;letter-spacing:6px}#extract span{font-size:12px;color:var(--muted)}#extract em{display:block;font-style:normal;font-family:var(--num);font-size:26px}
+#extract .bar{height:4px;background:rgba(255,255,255,.1);margin-top:6px;width:220px}#extract .bar i{display:block;height:100%;background:var(--g)}
+#bottomL{position:absolute;left:18px;bottom:18px;width:300px}
+#hprow{display:flex;align-items:center;gap:8px}#hpnum{font-family:var(--num);font-size:30px;width:48px;text-align:right}
+#hpbar{flex:1;height:12px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.25);position:relative}#hpfill{position:absolute;left:0;top:0;bottom:0;background:#e8e8e0}
+#stambar{height:3px;background:rgba(255,255,255,.1);margin:4px 0 0 56px}#stam{height:100%;background:#ffd24a}
+#armor{display:flex;gap:6px;margin:8px 0 0 56px}
+#armor div{position:relative;width:38px;height:38px;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:18px;overflow:hidden}
+#armor div.e{opacity:.35}#armor div b{position:absolute;right:3px;top:0;font-family:var(--num);font-size:15px}#armor div i{position:absolute;left:0;bottom:0;height:3px;background:var(--g)}
+#armor .l1{color:#d0d0c8}#armor .l2{color:#5bd46b}#armor .l3{color:#4a9cff}#armor .l4{color:#b467ff}#armor .l5{color:#ffb534}
+#skill{display:flex;align-items:center;gap:8px;margin:8px 0 0 56px;font-size:12px;color:var(--muted)}
+#skill div{position:relative;width:40px;height:40px;background:rgba(0,0,0,.5);border:1px solid var(--g);display:flex;align-items:center;justify-content:center;font-size:20px}
+#skill div.cd{border-color:#555;filter:grayscale(1)}#skill div.act{box-shadow:0 0 12px var(--g)}#skill b{position:absolute;left:-1px;bottom:-1px;font-size:10px;background:var(--g);color:#000;padding:0 3px}#skill em{position:absolute;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;font-style:normal;font-family:var(--num);font-size:18px;color:#fff}
+#bottomR{position:absolute;right:230px;bottom:18px;text-align:right}
+#ammo .am{font-family:var(--num);font-size:40px;font-weight:600;line-height:1;display:flex;gap:6px;align-items:baseline;justify-content:flex-end}#ammo .am span{color:#777;font-size:26px}#ammo .am em{font-style:normal;color:#aaa;font-size:24px}#ammo .am small{font-size:18px;color:#ffd24a}#ammo .am.low{color:#ff5a4a}
+#ammo .wn{font-size:12px;color:#ccc}
+#meds{display:flex;gap:6px;justify-content:flex-end;margin-top:6px;font-size:11px;color:#ddd;flex-wrap:wrap;max-width:360px;margin-left:auto}#meds span{background:rgba(0,0,0,.45);padding:1px 7px}#meds b{color:var(--g);margin-right:4px}
+#mini{position:absolute;right:18px;bottom:18px;width:200px;height:200px;border:1px solid var(--line)}
+/* 面板 */
+.panelw{position:fixed;inset:0;z-index:9;background:rgba(5,8,6,.8);pointer-events:auto}
+#inv{display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:20px;padding:60px 5vw}
+h4{font-size:13px;letter-spacing:3px;color:var(--g);margin-bottom:8px;border-bottom:1px solid var(--line);padding-bottom:6px}
+.eqr{display:flex;gap:8px;align-items:center;margin-bottom:6px}.eqr label{width:52px;font-size:12px;color:var(--muted)}.eqr .ic{flex:1}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:6px}
+.ic{position:relative;min-height:62px;padding:6px 8px;background:linear-gradient(160deg,color-mix(in srgb,var(--rc) 22%,#141a17),#101512);border:1px solid color-mix(in srgb,var(--rc) 55%,transparent);border-bottom:3px solid var(--rc);cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.ic:hover{filter:brightness(1.25)}
+.ic i{font-style:normal;font-size:18px;color:var(--rc)}.ic b{font-size:12px;font-weight:600;line-height:1.25}.ic em{position:absolute;right:6px;top:4px;font-style:normal;font-family:var(--num);font-size:15px}
+.ic .price{font-family:var(--num);font-size:14px;color:#ffd24a}.ic .own{font-size:10px;color:var(--muted)}
+.ic.unk{--rc:#555;cursor:default;align-items:center;justify-content:center;color:#666}
+.ic.r5{box-shadow:0 0 14px rgba(255,74,74,.5)}.ic.r4{box-shadow:0 0 10px rgba(255,181,52,.35)}
+.cap{position:relative;height:18px;background:rgba(255,255,255,.07);margin-bottom:8px}.cap i{position:absolute;left:0;top:0;bottom:0;background:rgba(58,255,138,.35)}.cap span{position:relative;font-size:11px;padding-left:8px;line-height:18px}
+.tip{font-size:11px;color:#777;margin-top:8px}.empty{color:#666;font-size:13px;padding:10px}
+#lootp{display:flex;align-items:center;justify-content:center}
+#lootBox{width:min(640px,92vw);background:#0f1512;border:1px solid var(--line);padding:16px}
+#lootHead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}#lootHead b{font-size:20px;color:var(--g)}#lootHead span{font-size:12px;color:var(--muted)}
+#lootProg{height:3px;background:rgba(255,255,255,.08);margin-bottom:10px}#lootProg i{display:block;height:100%;background:var(--g)}
+#lootItems{min-height:140px;max-height:46vh;overflow:auto}
+.lbtns{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+.btn2{padding:8px 18px;background:rgba(58,255,138,.1);border:1px solid var(--g);color:var(--g);font-weight:700;cursor:pointer}.btn2:hover{background:rgba(58,255,138,.25)}
+#bigmap{display:flex;align-items:center;justify-content:center}#mapc{border:1px solid var(--line);cursor:crosshair}
+/* 大厅 */
+.screen{position:fixed;inset:0;z-index:10}
+#menu{background:linear-gradient(90deg,rgba(8,12,10,.96) 0,rgba(8,12,10,.9) 55%,rgba(8,12,10,.55) 78%,rgba(8,12,10,.2));overflow:auto}
+#top{display:flex;align-items:center;gap:24px;padding:18px 30px;border-bottom:1px solid var(--line)}
+.logo b{font-size:30px;font-weight:900;letter-spacing:3px}.logo b span{color:var(--g)}.logo small{display:block;font-family:var(--num);letter-spacing:6px;color:var(--muted);font-size:13px}
+.tabs{display:flex;gap:4px}.tab{padding:8px 22px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;font-weight:700;letter-spacing:2px}.tab.on{color:var(--g);border-bottom-color:var(--g)}
+#money{margin-left:auto;text-align:right}#money span{display:block;font-size:11px;color:var(--muted);letter-spacing:2px}#money b{font-family:var(--num);font-size:28px;color:#ffd24a}
+#pstats{padding:6px 30px;font-size:12px;color:var(--muted)}
+#page{padding:10px 30px 60px;max-width:1280px}
+#page h3{font-size:13px;letter-spacing:3px;color:var(--g);margin:16px 0 8px}
+.cols{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:26px}
+.ops{display:flex;flex-direction:column;gap:8px}
+.op{padding:10px 12px;border:1px solid rgba(255,255,255,.08);border-left:4px solid var(--oc);cursor:pointer;background:rgba(255,255,255,.03)}.op.on{background:color-mix(in srgb,var(--oc) 18%,transparent);border-color:var(--oc)}
+.op b{font-size:17px}.op span{font-family:var(--num);letter-spacing:2px;color:var(--muted);margin-left:8px;font-size:13px}.op small{display:block;font-size:12px;color:#bbc;margin-top:4px}
+.slot{display:flex;align-items:center;gap:10px;margin-bottom:8px}.slot label{width:64px;font-size:13px;color:var(--muted)}
+.slot select{flex:1;background:#141a17;color:var(--txt);border:1px solid var(--line);padding:7px}
+.carry{display:flex;gap:10px;font-size:12px;margin:8px 0;flex-wrap:wrap}.carry label{width:64px;color:var(--muted)}.carry span{color:#ccd}.carry .val{color:#ffd24a;font-family:var(--num);font-size:18px}
+.mapcard{padding:14px;background:linear-gradient(135deg,rgba(58,255,138,.14),rgba(0,0,0,.2));border:1px solid var(--line)}
+.mapcard b{font-size:20px;display:block}.mapcard span{font-size:12px;color:var(--g)}.mapcard p{font-size:12px;color:#aab;line-height:1.6;margin-top:6px}
+.row{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:13px}.row label{width:52px;color:var(--muted)}.row input{flex:1;accent-color:var(--g)}
+.opts{display:flex;gap:4px;flex-wrap:wrap}.opt{padding:4px 12px;font-size:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--txt);cursor:pointer}.opt.on{border-color:var(--g);color:var(--g);background:rgba(58,255,138,.12)}
+.deploy{margin-top:18px;width:100%;padding:16px;font-size:22px;font-weight:900;letter-spacing:8px;background:var(--g);color:#0c100e;border:none;cursor:pointer;box-shadow:0 0 24px rgba(58,255,138,.35)}.deploy:hover{filter:brightness(1.1)}
+.keys{font-size:12px;color:#aab;line-height:2;margin-top:16px}.keys b{display:inline-block;min-width:20px;text-align:center;padding:0 4px;margin:0 2px;border:1px solid var(--line);color:var(--g)}
+#loading{background:#0c100e;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:30}#loading b{font-size:40px;letter-spacing:4px}#loading b span{color:var(--g)}
+#pause,#result{background:rgba(5,8,6,.8);display:flex;align-items:center;justify-content:center}
+.box{text-align:center;width:min(900px,94vw)}
+#rTitle{font-size:56px;font-weight:900;letter-spacing:8px}#rTitle.ok{color:var(--g);text-shadow:0 0 30px rgba(58,255,138,.4)}#rTitle.bad{color:#ff5a4a}
+#rSub{color:#ccc;margin-top:6px}#rSub b{color:#fff}
+.stats{display:flex;justify-content:center;gap:8px;margin:20px 0;flex-wrap:wrap}.stats div{background:rgba(20,26,23,.9);border-top:3px solid var(--g);padding:10px 18px;min-width:110px}.stats em{display:block;font-style:normal;font-family:var(--num);font-size:30px}.stats span{font-size:11px;color:var(--muted);letter-spacing:2px}
+#rItems{max-height:34vh;overflow:auto;margin-bottom:16px;text-align:left}
+@media (max-width:1000px){.cols{grid-template-columns:1fr}#inv{grid-template-columns:1fr;overflow:auto}#compass{width:320px}#bottomR{right:18px;bottom:230px}}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="hud" class="hidden">
+  <div id="vig"></div><div id="flash"></div><div id="scope"></div><div id="marks"></div>
+  <canvas id="compass" width="520" height="40"></canvas>
+  <div id="timer"></div><div id="carry"></div><div id="feed"></div><div id="notice"></div>
+  <div id="xh"><i></i><i></i><i></i><i></i></div><div id="hitm"></div><div id="dmgdir"></div>
+  <div id="killmsg"></div><div id="pickup"></div><div id="healc" class="hidden"></div><div id="extract" class="hidden"></div>
+  <div id="bottomL"><div id="hprow"><div id="hpnum"></div><div id="hpbar"><div id="hpfill"></div></div></div><div id="stambar"><div id="stam"></div></div><div id="armor"></div><div id="skill"></div></div>
+  <div id="bottomR"><div id="ammo"></div><div id="meds"></div></div>
+  <canvas id="mini" width="200" height="200"></canvas>
+</div>
+<div id="inv" class="panelw hidden"><div><h4>装备</h4><div id="invEq"></div></div><div><h4>背包</h4><div id="invBag"></div></div><div><h4>安全箱</h4><div id="invSafe"></div></div></div>
+<div id="lootp" class="panelw hidden"><div id="lootBox"><div id="lootHead"></div><div id="lootProg"></div><div id="lootItems" class="grid"></div><div id="lootBag"></div><div class="lbtns"><button class="btn2" id="lootAll">全部拾取</button><button class="btn2" id="lootClose">关闭（Esc）</button></div></div></div>
+<div id="bigmap" class="panelw hidden"><canvas id="mapc" width="800" height="800"></canvas></div>
+
+<div id="menu" class="screen hidden">
+  <div id="top"><div class="logo"><b>三角洲行动 <span>3D</span></b><small>DELTA FORCE · 烽火地带</small></div>
+    <div class="tabs"><div class="tab on" data-t="deploy">部署</div><div class="tab" data-t="shop">交易行</div><div class="tab" data-t="stash">仓库</div></div>
+    <div id="money"></div></div>
+  <div id="pstats"></div>
+  <div id="page"></div>
+  <div class="keys" style="padding:0 30px 30px"><b>WASD</b> 移动 <b>Shift</b> 奔跑 <b>空格</b> 跳 <b>C</b> 蹲 <b>Z</b> 趴 <b>左键</b> 开火 <b>右键</b> 瞄准 <b>R</b> 换弹 <b>B</b> 射击模式 <b>1</b><b>2</b> 切枪 <b>Q</b> 干员技能 <b>G</b> 手雷 <b>F</b> 搜索 / 拾取 <b>4-7</b> 药品 <b>Tab</b> 背包 <b>M</b> 地图 <b>V</b> 视角 <b>Esc</b> 暂停</div>
+</div>
+<div id="pause" class="screen hidden"><div class="box"><div style="font-size:40px;font-weight:900;letter-spacing:6px">暂停</div><div class="lbtns" style="justify-content:center;margin-top:20px"><button class="btn2" id="resume">继续行动</button><button class="btn2" id="quit" style="border-color:#ff5a4a;color:#ff5a4a">放弃行动（携带物资丢失）</button></div></div></div>
+<div id="result" class="screen hidden"><div class="box"><div id="rTitle"></div><div id="rSub"></div><div class="stats" id="rStats"></div><div id="rItems" class="grid"></div><button class="btn2" id="rBack">返回大厅</button></div></div>
+<div id="loading" class="screen"><b>三角洲行动 <span>3D</span></b><div style="color:#90a097;letter-spacing:4px;margin-top:8px">正在前往零号大坝……</div></div>
+<script>
+/*__THREE__*/
+</script>
+<script>
+(function(){
+/*__GAME__*/
+})();
+</script>
+</body>
+</html>

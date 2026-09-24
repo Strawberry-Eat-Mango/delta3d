@@ -27,14 +27,14 @@ function buildVM(u) {
 function updateVM(dt, u) {
   if (!VM.group) return;
   const g = activeGun(u);
-  const sc = null;
+  const sc = g && (GUNS[g.id].cls === 'SR' || GUNS[g.id].cls === 'DMR') ? 'x4' : null;
   const show = u.alive && u.state === 'ground' && !u.swim && (!G.tpp || G.adsView) && !(u.ads && (sc === 'x4' || sc === 'x8')) && !G.spectate;
   VM.group.visible = show; if (!show) return;
   VM.ads = lerp(VM.ads, u.ads ? 1 : 0, clamp(dt * 14, 0, 1));
   const hs = Math.hypot(u.vel.x, u.vel.z); VM.bob += dt * hs * 1.6;
   const b = u.onGround ? Math.min(1, hs / 6) * (1 - VM.ads * 0.85) : 0;
   VM.kick = Math.max(0, VM.kick - dt * 9);
-  const hip = [0.2, -0.2, -0.42], ads = [0, -VM.sightY, -0.3];
+  const hip = [0.2, -0.2, -0.42], ads = [0, -VM.sightY - 0.035, -0.36];
   const gp = VM.group.position;
   gp.set(lerp(hip[0], ads[0], VM.ads) + Math.cos(VM.bob) * 0.012 * b, lerp(hip[1], ads[1], VM.ads) - Math.abs(Math.sin(VM.bob)) * 0.014 * b, lerp(hip[2], ads[2], VM.ads) + VM.kick * 0.04);
   VM.group.rotation.set(VM.kick * 0.05, 0, 0);
@@ -466,7 +466,7 @@ function updateHud(dt) {
   else { G.extractT = 0; if (hc.ex !== '') { hc.ex = ''; $('extract').classList.add('hidden'); } }
   if (u.heal) { const k = 1 - u.heal.t / u.heal.total; $('healc').classList.remove('hidden'); setHTML($('healc'), 'hl', `<svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="26" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="4"/><circle cx="30" cy="30" r="26" fill="none" stroke="#3aff8a" stroke-width="4" stroke-dasharray="163.4" stroke-dashoffset="${(163.4 * (1 - k)).toFixed(1)}" transform="rotate(-90 30 30)"/></svg><span>${u.heal.t.toFixed(1)}</span><em>${itemName(u.heal.id)}</em>`); }
   else if (hc.hl !== '') { hc.hl = ''; $('healc').classList.add('hidden'); }
-  const scopeCls = u.ads && u.alive ? 'iron' : ''; if (hc.scope !== scopeCls) { hc.scope = scopeCls; $('scope').className = scopeCls; }
+  const gg = activeGun(u), scopeCls = u.ads && u.alive ? (gg && (GUNS[gg.id].cls === 'SR' || GUNS[gg.id].cls === 'DMR') ? 'x4' : 'iron') : ''; if (hc.scope !== scopeCls) { hc.scope = scopeCls; $('scope').className = scopeCls; }
   const moving = Math.hypot(u.vel.x, u.vel.z) > 0.6, spr = g ? GUNS[g.id].hip * (moving ? 1.6 : 1) * (u.stance === 'crouch' ? 0.8 : u.stance === 'prone' ? 0.6 : 1) : 0.02;
   const px = Math.round(spr / Math.tan(camera.fov * Math.PI / 360) * innerHeight / 2) + 4;
   setStyle($('xh'), 'xhs', 'width', px * 2 + 'px'); setStyle($('xh'), 'xhh', 'height', px * 2 + 'px'); setStyle($('xh'), 'xho', 'opacity', (u.ads || !u.alive || u.heal) ? '0' : '1');
@@ -578,7 +578,7 @@ function frame(now) {
   if (W.sky) { W.sky.position.copy(camera.position); W.sky.material.uniforms.t.value = now / 1000; }
   sun.target.position.set(camera.position.x, 0, camera.position.z); sun.position.copy(sun.target.position).addScaledVector(SUN_DIR, 250);
   renderer.autoClear = false; renderer.clear(); renderer.render(scene, camera);
-  if (G.state === 'play' && VM.group && VM.group.visible) { renderer.clearDepth(); VM.cam.aspect = camera.aspect; VM.cam.fov = 55 / Math.max(1, zoomMul * 0.7); VM.cam.updateProjectionMatrix(); renderer.render(VM.scene, VM.cam); }
+  if (G.state === 'play' && VM.group && VM.group.visible) { renderer.clearDepth(); VM.cam.aspect = camera.aspect; VM.cam.fov = 55; VM.cam.updateProjectionMatrix(); renderer.render(VM.scene, VM.cam); }
 }
 function boot() {
   applyQuality(); buildWorld(irand(1, 99999)); pickLobbySpot(); lobbyModel(); renderLobby();
